@@ -68,7 +68,7 @@ func (*mongodbFactory) NewManager(settings map[string]interface{}) (connection.M
 	credType := sharedConn.config.CredType
 	ssl := sharedConn.config.Ssl
 
-	if credType != "None" {
+	if credType != "" {
 		userName := sharedConn.config.UserName
 		password := sharedConn.config.Password
 		opts.SetAuth(options.Credential{

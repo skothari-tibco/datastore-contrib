@@ -36,6 +36,7 @@ func (t *TriggerFactory) New(config *trigger.Config) (trigger.Trigger, error) {
 		return nil, err
 	}
 	if settings.Connection != "" {
+
 		mConn, toConnerr := coerce.ToConnection(settings.Connection)
 		if toConnerr != nil {
 			return nil, toConnerr
@@ -74,24 +75,20 @@ type EventListener struct {
 // Initialize Mongodb Event Listener
 func (t *Trigger) Initialize(ctx trigger.InitContext) error {
 	t.logger = log.ChildLogger(ctx.Logger(), "mongodb-event-listener")
-	t.logger.Infof("============initializing event listener==")
+	t.logger.Infof("Initializing event listener")
 	for _, handler := range ctx.GetHandlers() {
-		s := &HandlerSettings{}
-		err := metadata.MapToStruct(handler.Settings(), s, true)
+		settings := &HandlerSettings{}
+		err := metadata.MapToStruct(handler.Settings(), settings, true)
 		if err != nil {
 			return err
 		}
-		evntLsnr := &EventListener{}
-		evntLsnr.settings = s
-		evntLsnr.handler = handler
-		evntLsnr.logger = t.logger
-		evntLsnr.database = evntLsnr.settings.Database
-		evntLsnr.done = make(chan bool)
+		evntLsnr := &EventListener{settings: settings, handler: handler, logger: t.logger, database: settings.Database, done: make(chan bool)}
+		
 		t.evntLsnrs = append(t.evntLsnrs, evntLsnr)
-		t.logger.Debugf("============collName=== %s", evntLsnr.settings.Collection)
-		t.logger.Debugf("========listenInsert=== %b", evntLsnr.settings.ListenInsert)
-		t.logger.Debugf("========listenUpdate=== %b", evntLsnr.settings.ListenUpdate)
-		t.logger.Debugf("========listenRemove=== %b", evntLsnr.settings.ListenRemove)
+		t.logger.Debugf("CollName %s", evntLsnr.settings.Collection)
+		t.logger.Debugf("ListenInsert %b", evntLsnr.settings.ListenInsert)
+		t.logger.Debugf("ListenUpdate %b", evntLsnr.settings.ListenUpdate)
+		t.logger.Debugf("ListenRemove %b", evntLsnr.settings.ListenRemove)
 
 	}
 
@@ -167,11 +164,11 @@ func (evntLsnr *EventListener) setStream(mclient *mongo.Client) error {
 	if evntLsnr.settings.Collection != "" {
 		coll := db.Collection(evntLsnr.settings.Collection)
 
-		evntLsnr.logger.Infof("listening on collection:: %s in Database:: %s", evntLsnr.settings.Collection, evntLsnr.database)
+		evntLsnr.logger.Infof("Opening stream on collection:: %s in Database:: %s", evntLsnr.settings.Collection, evntLsnr.database)
 
 		stream, err = coll.Watch(context.Background(), pipeline)
 	} else { // listening on database if no collection name specified
-		evntLsnr.logger.Infof("listening on all collections of database:: %s", evntLsnr.database)
+		evntLsnr.logger.Infof("Listening on all collections of database:: %s", evntLsnr.database)
 		stream, err = db.Watch(context.Background(), pipeline)
 	}
 
@@ -185,7 +182,7 @@ func (evntLsnr *EventListener) setStream(mclient *mongo.Client) error {
 }
 
 func (evntLsnr *EventListener) listen() {
-	evntLsnr.logger.Infof("============listening====")
+	evntLsnr.logger.Infof("Listening for Mongodb events on %s database", evntLsnr.database)
 	for {
 		select {
 		case <-evntLsnr.done:

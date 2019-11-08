@@ -1,0 +1,92 @@
+{
+  "name": "_APP_NAME_",
+  "type": "flogo:app",
+  "version": "0.0.1",
+  "description": "Flogo application description",
+  "appModel": "1.1.0",
+  "imports": [
+    "github.com/project-flogo/contrib/activity/log",
+    "github.com/project-flogo/flow@latest",
+    "github.com/project-flogo/datastore-contrib/mongodb@latest:/trigger/mongodb",
+    "github.com/project-flogo/datastore-contrib/mongodb@latest:/connection"
+  ],
+  "triggers": [
+    {
+      "id": "MongoDBTrigger",
+      "ref": "github.com/project-flogo/datastore-contrib/mongodb/trigger/mongodb",
+      "settings": {
+        "connection": "conn://mongo-conn"
+      },
+      "handlers": [
+        {
+          "settings": {
+            "databaseName": "sample",
+            "listenInsert": true,
+            "listenRemove": true,
+            "listenUpdate": true
+          },
+          "actions": [
+            {
+              "ref": "#flow",
+              "settings": {
+                "flowURI": "res://flow:simple_flow"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "connections": {
+    "mongo-conn": {
+      "id": "mongo-conn",
+      "name": "mc2",
+      "ref": "github.com/project-flogo/datastore-contrib/mongodb/connection",
+      "settings": {
+        "name": "mc2",
+        "description": "",
+        "connectionURI": "mongodb://localhost:27017",
+        "username": "",
+        "password": ""
+      }
+    }
+  },
+  "resources": [
+    {
+      "id": "flow:simple_flow",
+      "data": {
+        "name": "simple_flow",
+        "metadata": {
+          "input": [
+            {
+              "name": "in",
+              "type": "string",
+              "value": "test"
+            }
+          ],
+          "output": [
+            {
+              "name": "out",
+              "type": "string"
+            }
+          ]
+        },
+        "tasks": [
+          {
+            "id": "log",
+            "name": "Log Message",
+            "activity": {
+              "ref": "#log",
+              "input": {
+                "message": "flow.in",
+                "flowInfo": "false",
+                "addToFlow": "false"
+              }
+            }
+          }
+        ],
+        "links": []
+      }
+    }
+  ]
+}
